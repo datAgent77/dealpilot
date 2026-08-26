@@ -8,6 +8,7 @@ import {
   type Vehicle,
   type SearchArgs,
 } from "@/lib/catalog";
+import { registerTool, invokeToolForTest } from "@/lib/webmcp-compat";
 
 type Activity = { id: number; tool: string; detail: string; ts: string };
 
@@ -36,63 +37,62 @@ export default function Home() {
     );
   }
 
-  // Register the WebMCP tool so agents can drive the same search.
+  // Register the WebMCP tool (through the compat layer) so agents drive the same search.
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
     let interval: ReturnType<typeof setInterval> | undefined;
 
-    async function register(): Promise<boolean> {
-      const mc = document.modelContext;
-      if (!mc || signal.aborted) return false;
-      try {
-        await mc.registerTool(
-          {
-            name: "search_vehicles",
-            description:
-              "Search the used-car catalog by make, model, max price, max mileage, and title status. Returns matching vehicles with price and fair-value delta.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                make: { type: "string" },
-                model: { type: "string" },
-                maxPrice: { type: "number" },
-                maxMiles: { type: "number" },
-                excludeSalvage: { type: "boolean" },
-              },
-              required: [],
-            },
-            annotations: { readOnlyHint: true },
-            execute: async (args: SearchArgs) => {
-              const found = searchVehicles(args ?? {});
-              setResults(found); // the page visibly updates when the agent calls this
-              log("search_vehicles", `${JSON.stringify(args ?? {})} → ${found.length} result(s)`);
-              const slim = found.map((v) => ({
-                id: v.id,
-                title: `${v.year} ${v.make} ${v.model}`,
-                price: v.price,
-                miles: v.miles,
-                titleClean: v.titleClean,
-                valueDeltaPct: valueDelta(v),
-                location: v.location,
-              }));
-              return { content: [{ type: "text", text: JSON.stringify(slim) }] };
-            },
-          },
-          { signal },
-        );
-      } catch {
-        // Ignore aborts from React StrictMode remounts / re-registration races.
-        return false;
+    const searchTool = {
+      name: "search_vehicles",
+      description:
+        "Search the used-car catalog by make, model, max price, max mileage, and title status. Returns matching vehicles with price and fair-value delta.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          make: { type: "string" },
+          model: { type: "string" },
+          maxPrice: { type: "number" },
+          maxMiles: { type: "number" },
+          excludeSalvage: { type: "boolean" },
+        },
+        required: [],
+      },
+      annotations: { readOnlyHint: true },
+      execute: async (args: SearchArgs) => {
+        const found = searchVehicles(args ?? {});
+        setResults(found); // the page visibly updates when the agent calls this
+        log("search_vehicles", `${JSON.stringify(args ?? {})} → ${found.length} result(s)`);
+        // Return a compact, serializable plain object (no MCP content-wrapper required).
+        return {
+          count: found.length,
+          results: found.map((v) => ({
+            id: v.id,
+            title: `${v.year} ${v.make} ${v.model}`,
+            price: v.price,
+            miles: v.miles,
+            titleClean: v.titleClean,
+            valueDeltaPct: valueDelta(v),
+            location: v.location,
+          })),
+        };
+      },
+    };
+
+    async function tryRegister(): Promise<boolean> {
+      const ok = await registerTool(searchTool, signal);
+      if (ok) {
+        setWebmcp("on");
+        log("system", "WebMCP tool registered: search_vehicles");
       }
-      if (signal.aborted) return false;
-      setWebmcp("on");
-      log("system", "WebMCP tool registered: search_vehicles");
-      return true;
+      return ok;
     }
 
     void (async () => {
-      if (await register()) return;
+      // Expose a console helper for manual testing: await dealpilotInvoke("search_vehicles", {...})
+      (window as any).dealpilotInvoke = invokeToolForTest;
+
+      if (await tryRegister()) return;
       // API may be injected slightly after load — retry briefly, then give up.
       let tries = 0;
       interval = setInterval(async () => {
@@ -101,7 +101,7 @@ export default function Home() {
           if (interval) clearInterval(interval);
           return;
         }
-        const ok = await register();
+        const ok = await tryRegister();
         if (ok || tries > 6) {
           if (interval) clearInterval(interval);
           if (!ok && !document.modelContext) setWebmcp("off");
