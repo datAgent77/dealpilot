@@ -39,69 +39,80 @@ export default function Home() {
   // Register the WebMCP tool so agents can drive the same search.
   useEffect(() => {
     const controller = new AbortController();
+    const { signal } = controller;
+    let interval: ReturnType<typeof setInterval> | undefined;
 
-    function register() {
+    async function register(): Promise<boolean> {
       const mc = document.modelContext;
-      if (!mc) return false;
-
-      mc.registerTool(
-        {
-          name: "search_vehicles",
-          description:
-            "Search the used-car catalog by make, model, max price, max mileage, and title status. Returns matching vehicles with price and fair-value delta.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              make: { type: "string" },
-              model: { type: "string" },
-              maxPrice: { type: "number" },
-              maxMiles: { type: "number" },
-              excludeSalvage: { type: "boolean" },
+      if (!mc || signal.aborted) return false;
+      try {
+        await mc.registerTool(
+          {
+            name: "search_vehicles",
+            description:
+              "Search the used-car catalog by make, model, max price, max mileage, and title status. Returns matching vehicles with price and fair-value delta.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                make: { type: "string" },
+                model: { type: "string" },
+                maxPrice: { type: "number" },
+                maxMiles: { type: "number" },
+                excludeSalvage: { type: "boolean" },
+              },
+              required: [],
             },
-            required: [],
+            annotations: { readOnlyHint: true },
+            execute: async (args: SearchArgs) => {
+              const found = searchVehicles(args ?? {});
+              setResults(found); // the page visibly updates when the agent calls this
+              log("search_vehicles", `${JSON.stringify(args ?? {})} → ${found.length} result(s)`);
+              const slim = found.map((v) => ({
+                id: v.id,
+                title: `${v.year} ${v.make} ${v.model}`,
+                price: v.price,
+                miles: v.miles,
+                titleClean: v.titleClean,
+                valueDeltaPct: valueDelta(v),
+                location: v.location,
+              }));
+              return { content: [{ type: "text", text: JSON.stringify(slim) }] };
+            },
           },
-          annotations: { readOnlyHint: true },
-          execute: async (args: SearchArgs) => {
-            const found = searchVehicles(args ?? {});
-            setResults(found); // the page visibly updates when the agent calls this
-            log("search_vehicles", `${JSON.stringify(args ?? {})} → ${found.length} result(s)`);
-            const slim = found.map((v) => ({
-              id: v.id,
-              title: `${v.year} ${v.make} ${v.model}`,
-              price: v.price,
-              miles: v.miles,
-              titleClean: v.titleClean,
-              valueDeltaPct: valueDelta(v),
-              location: v.location,
-            }));
-            return { content: [{ type: "text", text: JSON.stringify(slim) }] };
-          },
-        },
-        { signal: controller.signal },
-      );
-
+          { signal },
+        );
+      } catch {
+        // Ignore aborts from React StrictMode remounts / re-registration races.
+        return false;
+      }
+      if (signal.aborted) return false;
       setWebmcp("on");
       log("system", "WebMCP tool registered: search_vehicles");
       return true;
     }
 
-    // Try now; if the API isn't injected yet, retry briefly, then give up.
-    if (!register()) {
+    void (async () => {
+      if (await register()) return;
+      // API may be injected slightly after load — retry briefly, then give up.
       let tries = 0;
-      const iv = setInterval(() => {
+      interval = setInterval(async () => {
         tries += 1;
-        if (register() || tries > 6) {
-          clearInterval(iv);
-          if (tries > 6 && !document.modelContext) setWebmcp("off");
+        if (signal.aborted) {
+          if (interval) clearInterval(interval);
+          return;
+        }
+        const ok = await register();
+        if (ok || tries > 6) {
+          if (interval) clearInterval(interval);
+          if (!ok && !document.modelContext) setWebmcp("off");
         }
       }, 500);
-      return () => {
-        clearInterval(iv);
-        controller.abort();
-      };
-    }
+    })();
 
-    return () => controller.abort();
+    return () => {
+      if (interval) clearInterval(interval);
+      controller.abort(new DOMException("component unmounted", "AbortError"));
+    };
   }, []);
 
   return (
