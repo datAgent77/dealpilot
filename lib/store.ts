@@ -5,7 +5,17 @@
 import { create } from "zustand";
 import { searchVehicles, type SearchArgs, type Vehicle } from "./catalog";
 
-export type Activity = { id: number; tool: string; detail: string; ts: string };
+export type Activity = {
+  id: number;
+  tool: string;
+  detail: string;
+  riskClass?: string;
+  decision?: string;
+  riskScore?: number;
+  ts: string;
+};
+
+export type ActivityInput = Omit<Activity, "id" | "ts">;
 
 export type Filters = {
   query: string;
@@ -38,7 +48,7 @@ type Store = {
   select: (id: string | null) => void;
   setCompare: (ids: string[]) => void;
   toggleSave: (id: string) => void;
-  logActivity: (tool: string, detail: string) => void;
+  logActivity: (entry: ActivityInput) => void;
   setWebmcp: (s: "checking" | "on" | "off") => void;
 };
 
@@ -58,12 +68,12 @@ export const useStore = create<Store>((set) => ({
     set((s) => ({
       saved: s.saved.includes(id) ? s.saved.filter((x) => x !== id) : [...s.saved, id],
     })),
-  logActivity: (tool, detail) =>
+  logActivity: (entry) =>
     set((s) => {
       const id = s._act + 1;
       return {
         _act: id,
-        activity: [{ id, tool, detail, ts: new Date().toLocaleTimeString() }, ...s.activity].slice(0, 30),
+        activity: [{ id, ts: new Date().toLocaleTimeString(), ...entry }, ...s.activity].slice(0, 30),
       };
     }),
   setWebmcp: (webmcp) => set({ webmcp }),

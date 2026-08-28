@@ -116,9 +116,14 @@ header.top { display: flex; align-items: center; justify-content: space-between;
 .detail-sm.ts { font-size: 11px; color: var(--dim); }
 .empty { color: var(--dim); font-size: 13px; }
 
-/* agent research feed */
-.rline { display: flex; align-items: center; gap: 6px; }
-.chk { color: var(--ok); font-weight: 800; }
+/* agent activity feed + action gate */
+.gate-byline { color: var(--dim); font-size: 12px; margin: -6px 0 12px; }
+.rline { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.gbadge { font-size: 10px; font-weight: 800; letter-spacing: 0.4px; padding: 2px 7px; border-radius: 999px; }
+.g-auto { color: var(--ok); background: rgba(63,185,138,0.12); border: 1px solid rgba(63,185,138,0.35); }
+.g-allow { color: var(--muted); background: rgba(154,160,170,0.1); border: 1px solid var(--line); }
+.g-confirm { color: var(--warn); background: rgba(224,169,60,0.12); border: 1px solid rgba(224,169,60,0.35); }
+.g-approval { color: var(--crit); background: rgba(242,109,109,0.14); border: 1px solid rgba(242,109,109,0.4); }
 
 /* compare view */
 .compare-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }

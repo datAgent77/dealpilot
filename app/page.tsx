@@ -26,7 +26,7 @@ export default function Home() {
       const n = await registerAllTools(signal);
       if (n > 0) {
         useStore.getState().setWebmcp("on");
-        useStore.getState().logActivity("system", `${n} WebMCP tools registered`);
+        useStore.getState().logActivity({ tool: "system", detail: `${n} WebMCP tools registered` });
       }
       return n > 0;
     }
