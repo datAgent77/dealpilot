@@ -1,43 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import {
-  VEHICLES,
-  searchVehicles,
-  valueDelta,
-  type Vehicle,
-  type SearchArgs,
-} from "@/lib/catalog";
+import { useEffect } from "react";
+import { searchVehicles, valueDelta, type SearchArgs } from "@/lib/catalog";
+import { useStore } from "@/lib/store";
 import { registerTool, invokeToolForTest } from "@/lib/webmcp-compat";
-
-type Activity = { id: number; tool: string; detail: string; ts: string };
+import { Filters } from "@/components/market/Filters";
+import { VehicleGrid } from "@/components/market/VehicleGrid";
+import { VehicleDetail } from "@/components/market/VehicleDetail";
+import { SavedList } from "@/components/market/SavedList";
+import { AgentActivity } from "@/components/agent/AgentActivity";
 
 export default function Home() {
-  const [results, setResults] = useState<Vehicle[]>(VEHICLES);
-  const [query, setQuery] = useState("");
-  const [webmcp, setWebmcp] = useState<"checking" | "on" | "off">("checking");
-  const [activity, setActivity] = useState<Activity[]>([]);
-  const actId = useRef(0);
+  const selectedId = useStore((s) => s.selectedId);
+  const webmcp = useStore((s) => s.webmcp);
 
-  function log(tool: string, detail: string) {
-    actId.current += 1;
-    setActivity((a) =>
-      [{ id: actId.current, tool, detail, ts: new Date().toLocaleTimeString() }, ...a].slice(0, 20),
-    );
-  }
-
-  // Human free-text search (same result set the agent tool produces).
-  function onQuery(q: string) {
-    setQuery(q);
-    const t = q.toLowerCase().trim();
-    setResults(
-      !t
-        ? VEHICLES
-        : VEHICLES.filter((v) => `${v.make} ${v.model} ${v.year}`.toLowerCase().includes(t)),
-    );
-  }
-
-  // Register the WebMCP tool (through the compat layer) so agents drive the same search.
+  // Register the WebMCP tool (through the compat layer). It drives the SAME store the human uses.
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
@@ -60,15 +37,25 @@ export default function Home() {
       },
       annotations: { readOnlyHint: true },
       execute: async (args: SearchArgs) => {
-        const found = searchVehicles(args ?? {});
-        setResults(found); // the page visibly updates when the agent calls this
-        log("search_vehicles", `${JSON.stringify(args ?? {})} → ${found.length} result(s)`);
-        // Return a compact, serializable plain object (no MCP content-wrapper required).
+        const a = args ?? {};
+        const st = useStore.getState();
+        // Reflect the agent's search in the human UI (one shared surface).
+        st.setFilter({
+          make: a.make ?? "",
+          model: a.model ?? "",
+          maxPrice: a.maxPrice ?? null,
+          maxMiles: a.maxMiles ?? null,
+          excludeSalvage: !!a.excludeSalvage,
+          query: "",
+        });
+        st.select(null);
+        const found = searchVehicles(a);
+        st.logActivity("search_vehicles", `${JSON.stringify(a)} → ${found.length} result(s)`);
         return {
           count: found.length,
-          results: found.map((v) => ({
+          results: found.slice(0, 20).map((v) => ({
             id: v.id,
-            title: `${v.year} ${v.make} ${v.model}`,
+            title: `${v.year} ${v.make} ${v.model} ${v.trim}`,
             price: v.price,
             miles: v.miles,
             titleClean: v.titleClean,
@@ -82,18 +69,15 @@ export default function Home() {
     async function tryRegister(): Promise<boolean> {
       const ok = await registerTool(searchTool, signal);
       if (ok) {
-        setWebmcp("on");
-        log("system", "WebMCP tool registered: search_vehicles");
+        useStore.getState().setWebmcp("on");
+        useStore.getState().logActivity("system", "WebMCP tool registered: search_vehicles");
       }
       return ok;
     }
 
     void (async () => {
-      // Expose a console helper for manual testing: await dealpilotInvoke("search_vehicles", {...})
       (window as any).dealpilotInvoke = invokeToolForTest;
-
       if (await tryRegister()) return;
-      // API may be injected slightly after load — retry briefly, then give up.
       let tries = 0;
       interval = setInterval(async () => {
         tries += 1;
@@ -104,7 +88,7 @@ export default function Home() {
         const ok = await tryRegister();
         if (ok || tries > 6) {
           if (interval) clearInterval(interval);
-          if (!ok && !document.modelContext) setWebmcp("off");
+          if (!ok && !document.modelContext) useStore.getState().setWebmcp("off");
         }
       }, 500);
     })();
@@ -136,57 +120,25 @@ export default function Home() {
 
       <p className="thesis">
         Traditional websites make agents navigate pages. <strong>DealPilot gives agents the tools
-        to understand the market.</strong> Try it yourself below — or ask your agent to
+        to understand the market.</strong> Browse it yourself — or ask your agent to
         “search for a Tesla Model 3 under $22,000, no salvage.”
       </p>
 
       <div className="grid">
-        <div>
-          <div className="searchbar">
-            <input
-              value={query}
-              onChange={(e) => onQuery(e.target.value)}
-              placeholder="Search make / model / year…"
-            />
-          </div>
-          <div className="count">{results.length} vehicle(s)</div>
-          <div className="cards">
-            {results.map((v) => {
-              const d = valueDelta(v);
-              return (
-                <div className="card" key={v.id}>
-                  <div className="name">
-                    {v.year} {v.make} {v.model}
-                  </div>
-                  <div className="meta">
-                    {v.miles.toLocaleString()} mi · {v.location}
-                  </div>
-                  <div className="price">${v.price.toLocaleString()}</div>
-                  <span className={`badge ${d >= 0 ? "deal" : "over"}`}>
-                    {d >= 0 ? `${d}% below fair value` : `${Math.abs(d)}% above fair value`}
-                  </span>
-                  {!v.titleClean && <span className="badge salvage">salvage</span>}
-                </div>
-              );
-            })}
-          </div>
+        <div className="main">
+          {selectedId ? (
+            <VehicleDetail id={selectedId} />
+          ) : (
+            <>
+              <Filters />
+              <VehicleGrid />
+            </>
+          )}
         </div>
-
-        <aside className="panel">
-          <h3>Agent activity</h3>
-          <div className="log">
-            {activity.length === 0 && (
-              <div className="empty">No agent calls yet. Tool calls will appear here.</div>
-            )}
-            {activity.map((a) => (
-              <div className="row" key={a.id}>
-                <span className="tool">{a.tool}</span>
-                <div className="detail">{a.detail}</div>
-                <div className="detail" style={{ fontSize: 11 }}>{a.ts}</div>
-              </div>
-            ))}
-          </div>
-        </aside>
+        <div className="side">
+          <SavedList />
+          <AgentActivity />
+        </div>
       </div>
     </div>
   );
