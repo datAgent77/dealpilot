@@ -1,6 +1,6 @@
 // Shared client state (Zustand). Both the human UI and the WebMCP tools drive this same store —
 // tools mutate it via useStore.getState() from outside React, so a human and their agent operate
-// one surface. P03/P04 add tool-facing actions; P02 uses it for filters, selection, saved, activity.
+// one surface.
 
 import { create } from "zustand";
 import { searchVehicles, type SearchArgs, type Vehicle } from "./catalog";
@@ -28,6 +28,7 @@ const initialFilters: Filters = {
 type Store = {
   filters: Filters;
   selectedId: string | null;
+  compareIds: string[];
   saved: string[];
   activity: Activity[];
   webmcp: "checking" | "on" | "off";
@@ -35,6 +36,7 @@ type Store = {
   setFilter: (patch: Partial<Filters>) => void;
   resetFilters: () => void;
   select: (id: string | null) => void;
+  setCompare: (ids: string[]) => void;
   toggleSave: (id: string) => void;
   logActivity: (tool: string, detail: string) => void;
   setWebmcp: (s: "checking" | "on" | "off") => void;
@@ -43,13 +45,15 @@ type Store = {
 export const useStore = create<Store>((set) => ({
   filters: initialFilters,
   selectedId: null,
+  compareIds: [],
   saved: [],
   activity: [],
   webmcp: "checking",
   _act: 0,
-  setFilter: (patch) => set((s) => ({ filters: { ...s.filters, ...patch } })),
-  resetFilters: () => set({ filters: initialFilters }),
+  setFilter: (patch) => set((s) => ({ filters: { ...s.filters, ...patch }, compareIds: [] })),
+  resetFilters: () => set({ filters: initialFilters, compareIds: [], selectedId: null }),
   select: (id) => set({ selectedId: id }),
+  setCompare: (ids) => set({ compareIds: ids }),
   toggleSave: (id) =>
     set((s) => ({
       saved: s.saved.includes(id) ? s.saved.filter((x) => x !== id) : [...s.saved, id],

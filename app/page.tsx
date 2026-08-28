@@ -1,82 +1,39 @@
 "use client";
 
 import { useEffect } from "react";
-import { searchVehicles, valueDelta, type SearchArgs } from "@/lib/catalog";
 import { useStore } from "@/lib/store";
-import { registerTool, invokeToolForTest } from "@/lib/webmcp-compat";
+import { registerAllTools } from "@/lib/webmcp-tools";
+import { invokeToolForTest } from "@/lib/webmcp-compat";
 import { Filters } from "@/components/market/Filters";
 import { VehicleGrid } from "@/components/market/VehicleGrid";
 import { VehicleDetail } from "@/components/market/VehicleDetail";
+import { CompareView } from "@/components/market/CompareView";
 import { SavedList } from "@/components/market/SavedList";
 import { AgentActivity } from "@/components/agent/AgentActivity";
 
 export default function Home() {
   const selectedId = useStore((s) => s.selectedId);
+  const compareIds = useStore((s) => s.compareIds);
   const webmcp = useStore((s) => s.webmcp);
 
-  // Register the WebMCP tool (through the compat layer). It drives the SAME store the human uses.
+  // Register all WebMCP tools (through the compat layer). They drive the SAME store the human uses.
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
     let interval: ReturnType<typeof setInterval> | undefined;
 
-    const searchTool = {
-      name: "search_vehicles",
-      description:
-        "Search the used-car catalog by make, model, max price, max mileage, and title status. Returns matching vehicles with price and fair-value delta.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          make: { type: "string" },
-          model: { type: "string" },
-          maxPrice: { type: "number" },
-          maxMiles: { type: "number" },
-          excludeSalvage: { type: "boolean" },
-        },
-        required: [],
-      },
-      annotations: { readOnlyHint: true },
-      execute: async (args: SearchArgs) => {
-        const a = args ?? {};
-        const st = useStore.getState();
-        // Reflect the agent's search in the human UI (one shared surface).
-        st.setFilter({
-          make: a.make ?? "",
-          model: a.model ?? "",
-          maxPrice: a.maxPrice ?? null,
-          maxMiles: a.maxMiles ?? null,
-          excludeSalvage: !!a.excludeSalvage,
-          query: "",
-        });
-        st.select(null);
-        const found = searchVehicles(a);
-        st.logActivity("search_vehicles", `${JSON.stringify(a)} → ${found.length} result(s)`);
-        return {
-          count: found.length,
-          results: found.slice(0, 20).map((v) => ({
-            id: v.id,
-            title: `${v.year} ${v.make} ${v.model} ${v.trim}`,
-            price: v.price,
-            miles: v.miles,
-            titleClean: v.titleClean,
-            valueDeltaPct: valueDelta(v),
-            location: v.location,
-          })),
-        };
-      },
-    };
-
     async function tryRegister(): Promise<boolean> {
-      const ok = await registerTool(searchTool, signal);
-      if (ok) {
+      const n = await registerAllTools(signal);
+      if (n > 0) {
         useStore.getState().setWebmcp("on");
-        useStore.getState().logActivity("system", "WebMCP tool registered: search_vehicles");
+        useStore.getState().logActivity("system", `${n} WebMCP tools registered`);
       }
-      return ok;
+      return n > 0;
     }
 
     void (async () => {
       (window as any).dealpilotInvoke = invokeToolForTest;
+      (window as any).dealpilotStore = useStore; // dev/debug convenience
       if (await tryRegister()) return;
       let tries = 0;
       interval = setInterval(async () => {
@@ -121,13 +78,15 @@ export default function Home() {
       <p className="thesis">
         Traditional websites make agents navigate pages. <strong>DealPilot gives agents the tools
         to understand the market.</strong> Browse it yourself — or ask your agent to
-        “search for a Tesla Model 3 under $22,000, no salvage.”
+        “find the best Tesla under $22,000, no salvage, and rank the top three by value.”
       </p>
 
       <div className="grid">
         <div className="main">
           {selectedId ? (
             <VehicleDetail id={selectedId} />
+          ) : compareIds.length > 0 ? (
+            <CompareView />
           ) : (
             <>
               <Filters />
