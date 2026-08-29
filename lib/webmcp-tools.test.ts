@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TOOLS } from "./webmcp-tools";
+import { TOOLS, TOOL_META } from "./webmcp-tools";
 
 function tool(name: string) {
   const t = TOOLS.find((x) => x.name === name);
@@ -7,14 +7,15 @@ function tool(name: string) {
   return t;
 }
 
-describe("webmcp read tools", () => {
-  it("registers unique, read-only research tools with descriptions", () => {
-    const names = TOOLS.map((t) => t.name);
+describe("webmcp tools", () => {
+  it("registers unique tools with valid descriptions; read tools are read-only, actions are not", () => {
+    const names = TOOL_META.map((t) => t.name);
     expect(new Set(names).size).toBe(names.length);
-    for (const t of TOOLS) {
-      expect(t.annotations?.readOnlyHint).toBe(true);
-      expect(t.description.length).toBeGreaterThan(0);
-      expect(t.description.length).toBeLessThanOrEqual(500);
+    for (const m of TOOL_META) {
+      expect(m.description.length).toBeGreaterThan(0);
+      expect(m.description.length).toBeLessThanOrEqual(500);
+      if (m.riskClass === "READ") expect(m.readOnly).toBe(true);
+      else expect(m.readOnly).toBe(false);
     }
   });
 

@@ -37,18 +37,39 @@ export function riskInfo(rc: RiskClass): RiskInfo {
   }
 }
 
-export type RunResult = { result: unknown; detail: string };
+export type ApprovalPayload = { vehicleId: string; amount: number; summary: string };
+export type RunResult = { result: unknown; detail: string; approval?: ApprovalPayload };
 export type Runner = (args: any) => RunResult | Promise<RunResult>;
 
-// Wrap a tool's logic with the Action Gate: run it, then log the call with its deterministic
-// decision + risk score so the activity panel shows how each call was governed.
+// Wrap a tool's logic with the Action Gate. AUTO/ALLOW run immediately. When a tool is APPROVAL
+// and its run produced an approval payload, the gate does NOT perform the side effect: it enqueues
+// an approval, logs it, and returns immediately with AWAITING_HUMAN_APPROVAL — the agent stops. The
+// human approves in the page (store.resolveApproval), which performs the action exactly once.
 export function gate(name: string, riskClass: RiskClass, run: Runner): ToolDef["execute"] {
   return async (args: any) => {
     const decision = classify(riskClass);
     const { score } = riskInfo(riskClass);
-    // P04: READ (AUTO) and WRITE (ALLOW) run immediately. P05 branches CONFIRM/APPROVAL here.
-    const { result, detail } = await run(args ?? {});
-    useStore.getState().logActivity({ tool: name, detail, riskClass, decision, riskScore: score });
-    return result;
+    const out = await run(args ?? {});
+
+    if (decision === "APPROVAL" && out.approval) {
+      const approvalId = useStore.getState().createApproval({
+        tool: name,
+        vehicleId: out.approval.vehicleId,
+        amount: out.approval.amount,
+        summary: out.approval.summary,
+        riskScore: score,
+      });
+      useStore.getState().logActivity({
+        tool: name,
+        detail: `awaiting approval — ${out.detail}`,
+        riskClass,
+        decision,
+        riskScore: score,
+      });
+      return { status: "AWAITING_HUMAN_APPROVAL", approvalId, summary: out.approval.summary };
+    }
+
+    useStore.getState().logActivity({ tool: name, detail: out.detail, riskClass, decision, riskScore: score });
+    return out.result;
   };
 }

@@ -4,6 +4,7 @@ import { VEHICLES } from "@/lib/catalog";
 import { useStore } from "@/lib/store";
 import { ValueBreakdown } from "./ValueBreakdown";
 import { PriceHistory } from "./PriceHistory";
+import { OfferSection } from "./OfferSection";
 
 export function VehicleDetail({ id }: { id: string }) {
   const v = VEHICLES.find((x) => x.id === id);
@@ -38,7 +39,8 @@ export function VehicleDetail({ id }: { id: string }) {
         <section className="panel">
           <h3>Price history</h3>
           <PriceHistory v={v} />
-          <div className="offer-placeholder">Offer flow arrives in a later phase.</div>
+          <div className="offer-title">Make an offer</div>
+          <OfferSection v={v} />
         </section>
       </div>
     </div>

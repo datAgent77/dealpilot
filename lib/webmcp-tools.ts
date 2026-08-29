@@ -169,6 +169,68 @@ const SPECS: Spec[] = [
       };
     },
   },
+  {
+    name: "save_vehicle",
+    description: "Save a vehicle to the user's saved list by id. Reversible.",
+    inputSchema: { type: "object", properties: { vehicleId: { type: "string" } }, required: ["vehicleId"] },
+    riskClass: "WRITE",
+    run: (a) => {
+      const v = find(a.vehicleId);
+      if (!v) return notFound(a.vehicleId);
+      S().save(v.id);
+      return { result: { id: v.id, saved: true }, detail: `saved ${title(v)}` };
+    },
+  },
+  {
+    name: "prepare_offer",
+    description:
+      "Draft an offer for a vehicle at a given amount (optional message). Does NOT send it — creates a draft the user can review before submitting.",
+    inputSchema: {
+      type: "object",
+      properties: { vehicleId: { type: "string" }, amount: { type: "number" }, message: { type: "string" } },
+      required: ["vehicleId", "amount"],
+    },
+    riskClass: "WRITE",
+    run: (a) => {
+      const v = find(a.vehicleId);
+      if (!v) return notFound(a.vehicleId);
+      if (typeof a.amount !== "number" || a.amount <= 0) {
+        return { result: { error: "a positive amount is required" }, detail: "invalid amount" };
+      }
+      const offer = S().prepareOffer(v.id, a.amount, a.message);
+      S().select(v.id);
+      return {
+        result: { offerId: offer.id, vehicleId: v.id, amount: offer.amount, status: "DRAFT" },
+        detail: `draft offer $${a.amount.toLocaleString()} on ${title(v)}`,
+      };
+    },
+  },
+  {
+    name: "submit_offer",
+    description:
+      "Requests submission of an offer to the seller. Requires explicit human approval in the page before any seller-facing action occurs; nothing is sent until the user approves.",
+    inputSchema: {
+      type: "object",
+      properties: { vehicleId: { type: "string" }, amount: { type: "number" } },
+      required: ["vehicleId"],
+    },
+    riskClass: "OUTREACH_FINANCIAL",
+    run: (a) => {
+      const v = find(a.vehicleId);
+      if (!v) return notFound(a.vehicleId);
+      const amount = typeof a.amount === "number" ? a.amount : S().getDraft(v.id)?.amount ?? 0;
+      if (amount <= 0) {
+        return { result: { error: "no amount — prepare an offer first or pass an amount" }, detail: "no amount" };
+      }
+      S().select(v.id);
+      const summary = `Send a $${amount.toLocaleString()} offer to the seller of the ${title(v)}`;
+      return {
+        result: null,
+        detail: `$${amount.toLocaleString()} offer on ${title(v)}`,
+        approval: { vehicleId: v.id, amount, summary },
+      };
+    },
+  },
 ];
 
 export const TOOLS: ToolDef[] = SPECS.map((s) => ({

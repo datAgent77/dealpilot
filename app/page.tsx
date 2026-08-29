@@ -10,6 +10,7 @@ import { VehicleDetail } from "@/components/market/VehicleDetail";
 import { CompareView } from "@/components/market/CompareView";
 import { SavedList } from "@/components/market/SavedList";
 import { AgentActivity } from "@/components/agent/AgentActivity";
+import { ApprovalCard } from "@/components/gate/ApprovalCard";
 
 export default function Home() {
   const selectedId = useStore((s) => s.selectedId);
@@ -83,6 +84,7 @@ export default function Home() {
 
       <div className="grid">
         <div className="main">
+          <ApprovalCard />
           {selectedId ? (
             <VehicleDetail id={selectedId} />
           ) : compareIds.length > 0 ? (
