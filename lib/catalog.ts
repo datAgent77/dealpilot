@@ -43,27 +43,24 @@ function round(n: number, to: number): number {
   return Math.round(n / to) * to;
 }
 
-// Curated hero deals (fixed) — clear, demo-friendly bargains. Prices set below fair value.
-const HEROES: Omit<Vehicle, "price">[] = [
-  { id: "h1", make: "Tesla", model: "Model 3", trim: "Long Range", year: 2021, miles: 41000, condition: "Excellent", titleClean: true, location: "San Jose, CA", region: "CA" },
-  { id: "h2", make: "Tesla", model: "Model 3", trim: "Standard", year: 2020, miles: 52000, condition: "Good", titleClean: true, location: "Oakland, CA", region: "CA" },
-  { id: "h3", make: "Toyota", model: "Camry", trim: "XLE", year: 2021, miles: 33000, condition: "Excellent", titleClean: true, location: "Fremont, CA", region: "CA" },
-  { id: "h4", make: "Honda", model: "Civic", trim: "Sport", year: 2022, miles: 24000, condition: "Excellent", titleClean: true, location: "Sunnyvale, CA", region: "CA" },
+// Curated hero deals (fixed, explicit prices) — clear, demo-friendly bargains. Several qualify as
+// Tesla · under $22k · under 70k miles · clean title, so "rank the top three by value" works.
+const HEROES: Vehicle[] = [
+  { id: "h1", make: "Tesla", model: "Model 3", trim: "Long Range", year: 2021, miles: 41000, condition: "Excellent", titleClean: true, location: "San Jose, CA", region: "CA", price: 21800 },
+  { id: "h2", make: "Tesla", model: "Model 3", trim: "Standard", year: 2020, miles: 52000, condition: "Good", titleClean: true, location: "Oakland, CA", region: "CA", price: 16900 },
+  { id: "h5", make: "Tesla", model: "Model 3", trim: "Standard", year: 2021, miles: 45000, condition: "Excellent", titleClean: true, location: "Fremont, CA", region: "CA", price: 19600 },
+  { id: "h6", make: "Tesla", model: "Model 3", trim: "Long Range", year: 2020, miles: 60000, condition: "Good", titleClean: true, location: "San Mateo, CA", region: "CA", price: 19450 },
+  { id: "h7", make: "Tesla", model: "Model 3", trim: "Standard", year: 2019, miles: 64000, condition: "Good", titleClean: true, location: "Sunnyvale, CA", region: "CA", price: 15500 },
+  { id: "h3", make: "Toyota", model: "Camry", trim: "XLE", year: 2021, miles: 33000, condition: "Excellent", titleClean: true, location: "Fremont, CA", region: "CA", price: 16500 },
+  { id: "h4", make: "Honda", model: "Civic", trim: "Sport", year: 2022, miles: 24000, condition: "Excellent", titleClean: true, location: "Sunnyvale, CA", region: "CA", price: 16300 },
 ];
 
 function buildCatalog(): Vehicle[] {
   const rng = mulberry32(20260826);
-  const out: Vehicle[] = [];
-
-  // Heroes first — price at ~13–16% below fair value.
-  for (const h of HEROES) {
-    const fv = fairValue({ ...h, price: 0 });
-    const discount = 0.13 + rng() * 0.03;
-    out.push({ ...h, price: round(fv * (1 - discount), 100) });
-  }
+  const out: Vehicle[] = [...HEROES];
 
   // Generated inventory.
-  const N = 116;
+  const N = 120 - HEROES.length;
   for (let i = 0; i < N; i++) {
     const m = pick(rng, MODELS);
     const trim = pick(rng, m.trims);
