@@ -10,6 +10,7 @@ import { VehicleDetail } from "@/components/market/VehicleDetail";
 import { CompareView } from "@/components/market/CompareView";
 import { SavedList } from "@/components/market/SavedList";
 import { AgentActivity } from "@/components/agent/AgentActivity";
+import { ToolsPanel } from "@/components/agent/ToolsPanel";
 import { ApprovalCard } from "@/components/gate/ApprovalCard";
 
 export default function Home() {
@@ -97,6 +98,7 @@ export default function Home() {
           )}
         </div>
         <div className="side">
+          <ToolsPanel />
           <SavedList />
           <AgentActivity />
         </div>
