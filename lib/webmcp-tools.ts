@@ -159,13 +159,15 @@ const SPECS: Spec[] = [
       const ids: string[] = Array.isArray(a.vehicleIds) ? a.vehicleIds.slice(0, 4) : [];
       const vs = ids.map(find).filter(Boolean) as Vehicle[];
       if (vs.length === 0) return { result: { error: "no valid vehicle ids" }, detail: "no valid ids" };
-      S().setCompare(vs.map((v) => v.id));
-      S().select(null);
       const rows = vs.map((v) => ({
         id: v.id, title: title(v), price: v.price, fairValue: fairValue(v),
         valueDeltaPct: valueDelta(v), dealScore: dealScore(v), miles: v.miles, titleClean: v.titleClean,
       }));
       const best = rows.reduce((x, y) => (y.dealScore > x.dealScore ? y : x));
+      // Leave the page on the winner so the human UI matches the agent's #1; the comparison
+      // table is one "Back to results" click away (compareIds stays set).
+      S().setCompare(vs.map((v) => v.id));
+      S().select(best.id);
       return {
         result: { count: rows.length, bestId: best.id, vehicles: rows },
         detail: `${rows.length} finalists · best: ${best.title} (${deltaLabel(best.valueDeltaPct)})`,
