@@ -54,10 +54,13 @@ const SPECS: Spec[] = [
       });
       S().select(null);
       const found = searchVehicles(a);
+      // Bound the tool output (WebMCP guidance: keep results small); the UI shows all matches.
+      const top = found.slice(0, 8);
       return {
         result: {
           count: found.length,
-          results: found.slice(0, 20).map((v) => ({
+          showing: top.length,
+          results: top.map((v) => ({
             id: v.id, title: title(v), price: v.price, miles: v.miles,
             titleClean: v.titleClean, valueDeltaPct: valueDelta(v), location: v.location,
           })),

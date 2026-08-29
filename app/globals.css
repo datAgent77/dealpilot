@@ -40,6 +40,7 @@ header.top { display: flex; align-items: center; justify-content: space-between;
 
 .grid { display: grid; grid-template-columns: 1fr 320px; gap: 22px; align-items: start; }
 @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { header.top { flex-direction: column; align-items: flex-start; gap: 10px; } }
 .side { display: flex; flex-direction: column; gap: 18px; }
 
 /* filters */
@@ -155,7 +156,8 @@ header.top { display: flex; align-items: center; justify-content: space-between;
 .compare-head h2 { font-size: 22px; font-weight: 800; }
 .compare-head .back { background: transparent; border: 0; color: var(--muted); font-size: 14px; cursor: pointer; }
 .compare-head .back:hover { color: var(--ink); }
-.compare-grid { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.compare { overflow-x: auto; }
+.compare-grid { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-width: 480px; }
 .cc { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 14px; }
 .cc.head { font-weight: 700; background: var(--panel); cursor: pointer; }
 .cc.head .trim { color: var(--muted); font-weight: 500; font-size: 12px; }
