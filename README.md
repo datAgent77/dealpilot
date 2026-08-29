@@ -7,8 +7,8 @@ human control via the in-page **DealPilot Action Gate**.
 
 Built for the **WebMCP Challenge** (Devpost). Open source under the MIT License.
 
-> **▶ Live demo:** _add your deployed URL here_ — open it in **ChatGPT's in-app browser** and say:
-> *“Find the best Tesla under $22,000, no salvage, and rank the top three by value.”*
+> **▶ Live demo:** **https://dealpilot-dusky.vercel.app** — open it in **ChatGPT's in-app browser**
+> and say: *“Find the best Tesla under $22,000, no salvage, and rank the top three by value.”*
 
 ## Why WebMCP
 
