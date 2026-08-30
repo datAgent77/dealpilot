@@ -21,9 +21,9 @@ in-app browser so the address bar + “✓ WebMCP detected” are on screen.
 
 ## Segment 03 — Ask the agent (0:28–1:05)
 **Screen:** ChatGPT in-app browser. Type: *“Find the best Tesla under $22,000, under 70,000 miles,
-clean title. Rank the top three by value, show me why #1 is the best deal, and open the details of
-the best one.”* Let the tool chain run; the page + Agent Research feed update live. (The final
-“open the details of the best one” keeps the page on #1, matching the agent’s ranking.)
+clean title. Rank the top three by value and show me why #1 is the best deal.”* Let the tool chain
+run; the page + Agent Research feed update live. (`compare_vehicles` lands the page on the winner,
+so the page shows the same #1 the agent ranks — no “open details” needed.)
 **VO (03.mp3):**
 > So I just ask. One prompt, and the agent runs a chain of tools on the site — searching, estimating
 > fair value, pulling price history, and comparing candidates — all visible on the page as it works.

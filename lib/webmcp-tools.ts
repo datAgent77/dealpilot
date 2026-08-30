@@ -100,7 +100,6 @@ const SPECS: Spec[] = [
     run: (a) => {
       const v = find(a.vehicleId);
       if (!v) return notFound(a.vehicleId);
-      S().select(v.id);
       const history = priceHistory(v);
       return { result: { id: v.id, title: title(v), history }, detail: `${title(v)} · ${history.length} points` };
     },
@@ -115,7 +114,6 @@ const SPECS: Spec[] = [
     run: (a) => {
       const v = find(a.vehicleId);
       if (!v) return notFound(a.vehicleId);
-      S().select(v.id);
       const b = breakdown(v);
       return {
         result: { id: v.id, title: title(v), base: b.base, adjustments: b.lines, fairValue: b.fairValue, askingPrice: v.price, valueDeltaPct: valueDelta(v) },
@@ -133,7 +131,6 @@ const SPECS: Spec[] = [
     run: (a) => {
       const v = find(a.vehicleId);
       if (!v) return notFound(a.vehicleId);
-      S().select(v.id);
       const score = dealScore(v);
       const vd = verdict(score);
       const b = breakdown(v);

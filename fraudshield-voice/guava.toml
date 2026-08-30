@@ -1,0 +1,7 @@
+project_id = "gp-e9a59a85-0b1b-4abd-9c2e-e6b9e2245775"
+name = "fraudshield-voice"
+call_direction = "inbound"
+base_image = "python-sandbox:3.14"
+tier = "guava-seed"
+replicas = 1
+enable_healthcheck = true
