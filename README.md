@@ -9,6 +9,7 @@ Built for the **WebMCP Challenge** (Devpost). Open source under the MIT License.
 
 > **▶ Live demo:** **https://dealpilot-dusky.vercel.app** — open it in **ChatGPT's in-app browser**
 > and say: *“Find the best Tesla under $22,000, no salvage, and rank the top three by value.”*
+> **▶ Demo video:** https://youtu.be/9jv1c2cBDeQ
 
 ![DealPilot — WebMCP tools, fair-value breakdown, and the in-page Action Gate approval](docs/screenshot.png)
 

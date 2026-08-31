@@ -5,6 +5,7 @@ DealPilot gives agents the tools to *understand the market* — and keeps you in
 one action that reaches the real world.
 
 - **Live demo:** https://dealpilot-dusky.vercel.app  (open in ChatGPT's in-app browser)
+- **Demo video:** https://youtu.be/9jv1c2cBDeQ
 - **Code (MIT):** https://github.com/datAgent77/dealpilot
 - **Try it:** *“Find the best Tesla under $22,000, no salvage, and rank the top three by value.”*
   then *“Prepare an $18,500 offer on the best one and submit it.”*
