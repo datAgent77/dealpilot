@@ -42,6 +42,13 @@ describe("webmcp tools", () => {
     expect(["h1", "h2", "h3"]).toContain(r.bestId);
   });
 
+  it("compare_vehicles rejects fewer than two unique valid vehicles", async () => {
+    const one: any = await tool("compare_vehicles").execute({ vehicleIds: ["h1"] });
+    const duplicates: any = await tool("compare_vehicles").execute({ vehicleIds: ["h1", "h1"] });
+    expect(one.error).toMatch(/at least two/);
+    expect(duplicates.error).toMatch(/at least two/);
+  });
+
   it("fails safely on an unknown vehicle id", async () => {
     const r: any = await tool("get_vehicle_details").execute({ vehicleId: "does-not-exist" });
     expect(r.error).toBeTruthy();

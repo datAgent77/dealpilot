@@ -28,6 +28,15 @@ describe("action tools + human approval", () => {
     expect(approvals).toHaveLength(0);
   });
 
+  it("rejects non-finite offer amounts", async () => {
+    const prepared: any = await tool("prepare_offer").execute({ vehicleId: "h1", amount: Number.NaN });
+    const submitted: any = await tool("submit_offer").execute({ vehicleId: "h1", amount: Number.POSITIVE_INFINITY });
+    expect(prepared.error).toBeTruthy();
+    expect(submitted.error).toBeTruthy();
+    expect(useStore.getState().offers).toHaveLength(0);
+    expect(useStore.getState().approvals).toHaveLength(0);
+  });
+
   it("submit_offer requires approval and does NOT send", async () => {
     const r: any = await tool("submit_offer").execute({ vehicleId: "h1", amount: 18500 });
     expect(r.status).toBe("AWAITING_HUMAN_APPROVAL");

@@ -26,7 +26,7 @@ export function OfferSection({ v }: { v: Vehicle }) {
   }
 
   function submit() {
-    if (!amount || amount <= 0) return;
+    if (!Number.isFinite(amount) || amount <= 0) return;
     prepareOffer(v.id, amount);
     const summary = `Send a $${amount.toLocaleString()} offer to the seller of the ${v.year} ${v.make} ${v.model} ${v.trim}`;
     createApproval({ tool: "submit_offer", vehicleId: v.id, amount, summary, riskScore: 78 });
@@ -43,7 +43,7 @@ export function OfferSection({ v }: { v: Vehicle }) {
     <div className="offer-box">
       <div className="offer-row">
         <label>Offer amount</label>
-        <input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
+        <input type="number" min="1" step="1" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
       </div>
       {draft && <div className="offer-draft-note">Draft saved: ${draft.amount.toLocaleString()}</div>}
       {pending ? (

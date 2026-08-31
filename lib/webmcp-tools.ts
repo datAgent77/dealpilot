@@ -35,8 +35,8 @@ const SPECS: Spec[] = [
       properties: {
         make: { type: "string" },
         model: { type: "string" },
-        maxPrice: { type: "number" },
-        maxMiles: { type: "number" },
+        maxPrice: { type: "number", minimum: 0 },
+        maxMiles: { type: "number", minimum: 0 },
         excludeSalvage: { type: "boolean" },
       },
       required: [],
@@ -149,13 +149,26 @@ const SPECS: Spec[] = [
     name: "compare_vehicles",
     description:
       "Compare 2-4 vehicles by id side by side: price, fair value, value delta, deal score, mileage, and title. Highlights the best value and shows the comparison in the page.",
-    inputSchema: { type: "object", properties: { vehicleIds: { type: "array", items: { type: "string" } } }, required: ["vehicleIds"] },
+    inputSchema: {
+      type: "object",
+      properties: {
+        vehicleIds: {
+          type: "array", items: { type: "string" }, minItems: 2, maxItems: 4, uniqueItems: true,
+        },
+      },
+      required: ["vehicleIds"],
+    },
     annotations: { readOnlyHint: true },
     riskClass: "READ",
     run: (a) => {
-      const ids: string[] = Array.isArray(a.vehicleIds) ? a.vehicleIds.slice(0, 4) : [];
+      const requestedIds: unknown[] = Array.isArray(a.vehicleIds) ? a.vehicleIds : [];
+      const ids: string[] = Array.isArray(a.vehicleIds)
+        ? [...new Set(requestedIds.filter((id): id is string => typeof id === "string"))].slice(0, 4)
+        : [];
       const vs = ids.map(find).filter(Boolean) as Vehicle[];
-      if (vs.length === 0) return { result: { error: "no valid vehicle ids" }, detail: "no valid ids" };
+      if (vs.length < 2) {
+        return { result: { error: "at least two unique, valid vehicle ids are required" }, detail: "fewer than two valid ids" };
+      }
       const rows = vs.map((v) => ({
         id: v.id, title: title(v), price: v.price, fairValue: fairValue(v),
         valueDeltaPct: valueDelta(v), dealScore: dealScore(v), miles: v.miles, titleClean: v.titleClean,
@@ -189,14 +202,14 @@ const SPECS: Spec[] = [
       "Draft an offer for a vehicle at a given amount (optional message). Does NOT send it — creates a draft the user can review before submitting.",
     inputSchema: {
       type: "object",
-      properties: { vehicleId: { type: "string" }, amount: { type: "number" }, message: { type: "string" } },
+      properties: { vehicleId: { type: "string" }, amount: { type: "number", exclusiveMinimum: 0 }, message: { type: "string" } },
       required: ["vehicleId", "amount"],
     },
     riskClass: "WRITE",
     run: (a) => {
       const v = find(a.vehicleId);
       if (!v) return notFound(a.vehicleId);
-      if (typeof a.amount !== "number" || a.amount <= 0) {
+      if (typeof a.amount !== "number" || !Number.isFinite(a.amount) || a.amount <= 0) {
         return { result: { error: "a positive amount is required" }, detail: "invalid amount" };
       }
       const offer = S().prepareOffer(v.id, a.amount, a.message);
@@ -213,7 +226,7 @@ const SPECS: Spec[] = [
       "Requests submission of an offer to the seller. Requires explicit human approval in the page before any seller-facing action occurs; nothing is sent until the user approves.",
     inputSchema: {
       type: "object",
-      properties: { vehicleId: { type: "string" }, amount: { type: "number" } },
+      properties: { vehicleId: { type: "string" }, amount: { type: "number", exclusiveMinimum: 0 } },
       required: ["vehicleId"],
     },
     riskClass: "OUTREACH_FINANCIAL",
@@ -221,7 +234,7 @@ const SPECS: Spec[] = [
       const v = find(a.vehicleId);
       if (!v) return notFound(a.vehicleId);
       const amount = typeof a.amount === "number" ? a.amount : S().getDraft(v.id)?.amount ?? 0;
-      if (amount <= 0) {
+      if (!Number.isFinite(amount) || amount <= 0) {
         return { result: { error: "no amount — prepare an offer first or pass an amount" }, detail: "no amount" };
       }
       S().select(v.id);

@@ -35,7 +35,6 @@ export default function Home() {
 
     void (async () => {
       (window as any).dealpilotInvoke = invokeToolForTest;
-      (window as any).dealpilotStore = useStore; // dev/debug convenience
       if (await tryRegister()) return;
       let tries = 0;
       interval = setInterval(async () => {
